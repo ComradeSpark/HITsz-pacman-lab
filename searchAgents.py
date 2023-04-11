@@ -304,15 +304,24 @@ class CornersProblem(search.SearchProblem):
         """
         "*** YOUR CODE HERE ***"
         # A state consists of location, eaten food
-        eaten_food = [self.startingPosition] if self.startingPosition in self.corners else []
-        return (self.startingPosition, eaten_food)
+        is_eatens = [False for _ in range(len(self.corners))]
+        for i in range(len(self.corners)):
+            if self.startingPosition == self.corners[i]:
+                is_eatens[i] = True
+                break
+        return (self.startingPosition, is_eatens)
 
     def isGoalState(self, state: Any):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        isGoal = len(state[1]) == len(self.corners)
+        isGoal = True
+        is_eatens = state[1]
+        for is_eaten in is_eatens:
+            if not is_eaten:
+                isGoal = False
+                break
 
         # For display purposes only
         if isGoal and self.visualize:
@@ -336,7 +345,7 @@ class CornersProblem(search.SearchProblem):
         """
 
         successors = []
-        eaten_food = state[1]
+        is_eatens = state[1]
         x, y = state[0]
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
             # Add a successor state to the successor list if the action is legal
@@ -348,11 +357,14 @@ class CornersProblem(search.SearchProblem):
 
             "*** YOUR CODE HERE ***"
             dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
+            next_position = (nextx, nexty) = int(x + dx), int(y + dy)
             hitsWall = self.walls[nextx][nexty]
             if not hitsWall:
-                next_eaten_food = eaten_food + [(nextx, nexty)] if (nextx, nexty) in self.corners and (nextx, nexty) not in eaten_food else eaten_food
-                nextState = ((nextx, nexty), next_eaten_food)
+                next_is_eatens = is_eatens.copy()
+                for i in range(len(self.corners)):
+                    if next_position == self.corners[i]:
+                        next_is_eatens[i] = True
+                nextState = (next_position, next_is_eatens)
                 cost = 1
                 successors.append((nextState, action, cost))
 
@@ -399,27 +411,30 @@ def cornersHeuristic(state: Any, problem: CornersProblem):
     
     heur = 0
     location = state[0]
-    eaten_food = state[1]
+    is_eatens = state[1]
 
-    remain_food = [food for food in corners if food not in eaten_food]
+    remain_food_indexes = []
+    for i in range(len(is_eatens)):
+        if not is_eatens[i]:
+            remain_food_indexes.append(i)
 
     # max manhattan
-    # for remain in remain_food:
-    #     manhattan_tmp = manhattan(remain, state[0])
+    # for i in remain_food_indexes:
+    #     manhattan_tmp = manhattan(corners[i], state[0])
     #     if manhattan_tmp > heur:
     #         heur = manhattan_tmp
 
     # Greedy
-    while len(remain_food) > 0:
-        food_to_be_eat = 0
+    while len(remain_food_indexes) > 0:
+        food_eat = 0
         min = 999999
-        for i in range(len(remain_food)):
-            manhattan_tmp = manhattan(location, remain_food[i])
+        for i in remain_food_indexes:
+            manhattan_tmp = manhattan(location, corners[i])
             if manhattan_tmp < min:
-                food_to_be_eat = i
+                food_eat = i
                 min = manhattan_tmp
-        location = remain_food[food_to_be_eat]
-        del remain_food[food_to_be_eat]
+        location = corners[food_eat]
+        remain_food_indexes.remove(food_eat)
         heur += min
     
     return heur # Default to trivial solution
